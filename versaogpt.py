@@ -1,144 +1,135 @@
 import pygame
-import networkx as nx
 import random
-import time
-
-# Configurações do jogo
-WIDTH, HEIGHT = 800, 600
-NODE_RADIUS = 20
-FPS = 60
-STAMINA_DECREASE = 1
-STAMINA_INCREASE = 8
-MOSCA_INTERVAL = 5  # Segundos
 
 # Inicializa o pygame
 pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Qiqi e a Teia")
 
-# Fontes
-font = pygame.font.Font(None, 36)
+# Dimensões da tela
+WIDTH, HEIGHT = 600, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Jogo da Aranha")
 
 # Cores
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-# Classe para a Aranha Qiqi
-class Qiqi:
-    def __init__(self, node):
-        self.node = node
-        self.stamina = 5
-        self.moscas_comidas = 0
+# Fontes
+font = pygame.font.SysFont(None, 40)
 
-    def move(self, target_node):
-        if self.stamina > 0:
-            # Gasta 1 de Stamina por movimento
-            self.stamina -= STAMINA_DECREASE
-            self.node = target_node
+# FPS
+clock = pygame.time.Clock()
+FPS = 60
 
-    def eat_mosca(self):
-        self.stamina = min(20, self.stamina + STAMINA_INCREASE)
-        self.moscas_comidas += 1
+# Posições dos pontos da teia
+points = [(100, 100), (500, 100), (300, 200), (100, 300), (500, 300), (300, 400)]
 
-# Função para desenhar o grafo (teia)
-def draw_graph(G, pos, qiqi, mosca_node):
-    screen.fill(WHITE)
-    
-    # Desenha as arestas
-    for edge in G.edges():
-        pygame.draw.line(screen, BLACK, pos[edge[0]], pos[edge[1]], 2)
-    
-    # Desenha os nós
-    for node in G.nodes():
-        color = BLUE if node == qiqi.node else GREEN if node == mosca_node else BLACK
-        pygame.draw.circle(screen, color, pos[node], NODE_RADIUS)
-    
-    # Desenha a Stamina e o número de moscas comidas
-    stamina_text = font.render(f"Stamina: {qiqi.stamina}", True, BLACK)
-    moscas_text = font.render(f"Moscas comidas: {qiqi.moscas_comidas}", True, BLACK)
-    screen.blit(stamina_text, (10, 10))
-    screen.blit(moscas_text, (10, 50))
+# Função para desenhar a teia
+def draw_web():
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            pygame.draw.line(screen, WHITE, points[i], points[j], 2)
 
-# Função para desenhar a tela de Game Over
-def game_over_screen(qiqi):
-    screen.fill(RED)
-    game_over_text = font.render("GAME OVER", True, WHITE)
-    moscas_text = font.render(f"Moscas comidas: {qiqi.moscas_comidas}", True, WHITE)
-    retry_text = font.render("Pressione R para Jogar Novamente", True, WHITE)
-    
-    screen.blit(game_over_text, (WIDTH // 2 - 100, HEIGHT // 2 - 50))
-    screen.blit(moscas_text, (WIDTH // 2 - 100, HEIGHT // 2))
-    screen.blit(retry_text, (WIDTH // 2 - 180, HEIGHT // 2 + 50))
-    
-    pygame.display.update()
+# Função para exibir texto na tela
+def draw_text(text, color, x, y):
+    screen_text = font.render(text, True, color)
+    screen.blit(screen_text, [x, y])
 
-# Função principal
-def main():
-    clock = pygame.time.Clock()
+# Classe Aranha
+class Spider:
+    def __init__(self):
+        self.position = 0  # Começa no primeiro ponto da teia
+        self.stamina = 10
     
-    # Cria o grafo
-    G = nx.Graph()
-    G.add_edges_from([(0, 1), (1, 2), (2, 3), (0, 3), (1, 3), (3, 4)])
-    pos = nx.spring_layout(G, scale=2)  # Layout para posicionar os nós
-    
-    # Converte as posições para coordenadas da tela
-    pos = {node: (int(pos[node][0] * WIDTH // 2 + WIDTH // 2), 
-                  int(pos[node][1] * HEIGHT // 2 + HEIGHT // 2)) for node in pos}
-    
-    # Inicializa Qiqi e a mosca
-    qiqi = Qiqi(random.choice(list(G.nodes)))
-    mosca_node = random.choice(list(G.nodes))
-    last_mosca_time = time.time()
+    def move(self, direction):
+        new_position = self.position
+        if direction == 'up' and new_position - 2 >= 0:
+            new_position -= 2
+        elif direction == 'down' and new_position + 2 < len(points):
+            new_position += 2
+        elif direction == 'left' and new_position - 1 >= 0:
+            new_position -= 1
+        elif direction == 'right' and new_position + 1 < len(points):
+            new_position += 1
 
-    # Estado do jogo
-    running = True
+        if new_position != self.position:
+            self.stamina -= 1
+            self.position = new_position
+
+    def draw(self):
+        pygame.draw.circle(screen, BLUE, points[self.position], 15)
+
+# Classe Mosca
+class Fly:
+    def __init__(self):
+        self.position = random.randint(0, len(points) - 1)
+    
+    def respawn(self):
+        self.position = random.randint(0, len(points) - 1)
+    
+    def draw(self):
+        pygame.draw.circle(screen, GREEN, points[self.position], 10)
+
+# Função principal do jogo
+def game():
+    spider = Spider()
+    fly = Fly()
+
     game_over = False
-    
-    while running:
-        clock.tick(FPS)
+
+    while not game_over:
+        screen.fill(BLACK)
+        draw_web()
+        spider.draw()
+        fly.draw()
         
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if game_over and event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                main()  # Reinicia o jogo
-            
-        if game_over:
-            game_over_screen(qiqi)
-            continue
-
-        # Movimento da aranha com as teclas direcionais
-        keys = pygame.key.get_pressed()
-        neighbors = list(G.neighbors(qiqi.node))
+        # Verifica se a aranha alcançou a mosca
+        if spider.position == fly.position:
+            fly.respawn()
+            spider.stamina += 8
         
-        if keys[pygame.K_LEFT] and neighbors:
-            qiqi.move(neighbors[0])
-        elif keys[pygame.K_RIGHT] and neighbors:
-            qiqi.move(neighbors[1])
+        # Exibe a stamina
+        draw_text(f"Stamina: {spider.stamina}", WHITE, 10, 10)
 
-        # Verifica se a Qiqi comeu a mosca
-        if qiqi.node == mosca_node:
-            qiqi.eat_mosca()
-            mosca_node = random.choice(list(G.nodes))  # Nova mosca em posição aleatória
-            last_mosca_time = time.time()
-
-        # Checa se é hora de criar uma nova mosca
-        if time.time() - last_mosca_time > MOSCA_INTERVAL:
-            mosca_node = random.choice(list(G.nodes))
-            last_mosca_time = time.time()
-
-        # Verifica se a Stamina chegou a 0
-        if qiqi.stamina <= 0:
+        # Verifica se a stamina acabou
+        if spider.stamina <= 0:
             game_over = True
 
-        # Desenha o grafo e os status
-        draw_graph(G, pos, qiqi, mosca_node)
+        # Eventos e movimentação por toque de tecla
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    spider.move('up')
+                if event.key == pygame.K_DOWN:
+                    spider.move('down')
+                if event.key == pygame.K_LEFT:
+                    spider.move('left')
+                if event.key == pygame.K_RIGHT:
+                    spider.move('right')
+
+        pygame.display.update()
+        clock.tick(FPS)
+
+    # Tela de derrota
+    while game_over:
+        screen.fill(BLACK)
+        draw_text("GAME OVER", RED, WIDTH // 2 - 100, HEIGHT // 2 - 50)
+        draw_text("Pressione R para reiniciar", WHITE, WIDTH // 2 - 150, HEIGHT // 2)
         pygame.display.update()
 
-    pygame.quit()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    game()
 
-if __name__ == "__main__":
-    main()
+# Inicia o jogo
+game()

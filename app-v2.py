@@ -255,6 +255,7 @@ def rodar_jogo():
   #loop infinito
   while rodando:
     relogio.tick(FPS) #contagem de tempo
+    vizinhos = list(G.neighbors(aranha.vertice)) #define os vizinhos
     
     #desenha e atualiza os objetos na tela
     tela.blit(bg_jogo, (0,0))
@@ -270,32 +271,6 @@ def rodar_jogo():
       som_morteAranha.play()
       derrota = True
 
-    #mapeamento de teclas e vizinhos
-    tecla = pygame.key.get_pressed()
-    vizinhos = list(G.neighbors(aranha.vertice))
-    
-    #movimentação da aranha com as setas
-    if tecla[pygame.K_LEFT]:
-      if len(vizinhos) > 0:
-        aranha.move(vizinhos[0])
-      else:
-        som_notPasso.play()
-    elif tecla[pygame.K_RIGHT]:
-      if len(vizinhos) > 1:
-        aranha.move(vizinhos[1])
-      else:
-        som_notPasso.play()
-    elif tecla[pygame.K_UP]:
-      if len(vizinhos) > 2:
-        aranha.move(vizinhos[2])
-      else:
-        som_notPasso.play()
-    elif tecla[pygame.K_DOWN]:
-      if len(vizinhos) > 3:
-        aranha.move(vizinhos[3])
-      else:
-        som_notPasso.play()
-
     #verifica se a aranha comeu uma mosca
     if aranha.vertice == mosca_vertice:
       aranha.comer()
@@ -310,11 +285,34 @@ def rodar_jogo():
     for evento in pygame.event.get():
       if evento.type == pygame.QUIT:
         rodando = False #sair do jogo
-      
-      if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-        rodando = False
-        tela_inicial()
 
+    #movimentação da aranha com as setas
+      if evento.type == pygame.KEYDOWN:
+        if evento.key == pygame.K_ESCAPE:
+          rodando = False
+          tela_inicial()
+        if evento.key == pygame.K_LEFT:
+          if len(vizinhos) > 0:
+            aranha.move(vizinhos[0])
+          else:
+            som_notPasso.play()
+        if evento.key == pygame.K_RIGHT:
+          if len(vizinhos) > 1:
+            aranha.move(vizinhos[1])
+          else:
+            som_notPasso.play()
+        if evento.key == pygame.K_UP:
+          if len(vizinhos) > 2:
+            aranha.move(vizinhos[2])
+          else:
+            som_notPasso.play()
+        if evento.key == pygame.K_DOWN:
+          if len(vizinhos) > 3:
+            aranha.move(vizinhos[3])
+          else:
+            som_notPasso.play()   
+
+    #interações com o botão voltar
       if evento.type == pygame.MOUSEMOTION: #hover
         voltar_btn.check_hover(evento.pos)
       if evento.type == pygame.MOUSEBUTTONDOWN: #click
@@ -322,7 +320,8 @@ def rodar_jogo():
           if voltar_btn.clicou(evento.pos):
             rodando = False
             tela_inicial()
-
+    
+    #para a musica e chama a tela de derrota
       if derrota:
         pygame.mixer.music.stop()
         tela_derrota(aranha)
